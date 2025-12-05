@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DataHub ВУЗов РК</title>
+  <style>
+    /* Общие стили */
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0; background: #f0f4ff; color: #222;
+    }
+    header {
+      background: #2a56c6; color: white;
+      padding: 20px 15px; text-align: center;
+      position: sticky; top: 0; z-index: 1000;
+    }
+    header h1 { margin: 0; font-weight: 700; font-size: 1.8rem; }
+    #searchInput {
+      margin-top: 15px; padding: 10px 15px;
+      width: 90%; max-width: 450px; border-radius: 8px;
+      border: none; font-size: 1rem;
+    }
+    main { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
+    .card-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+    .card {
+      background: white; width: 300px; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(42,86,198,0.2);
+      padding: 15px 20px; cursor: pointer; transition: transform 0.2s ease;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .card:hover { transform: translateY(-6px); }
+    .card h3 { margin-top: 0; color: #2a56c6; font-size: 1.3rem; }
+    .card p { margin: 4px 0; color: #555; font-size: 0.95rem; }
+    .btn-compare {
+      margin-top: 10px; padding: 8px;
+      background: #2a56c6; border: none; border-radius: 6px;
+      color: white; font-weight: 600; cursor: pointer; transition: background 0.3s;
+    }
+    .btn-compare:hover { background: #2045a8; }
+    .detail-section, .compare-section { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 6px 20px rgba(42,86,198,0.25); margin-top: 20px; max-width: 900px; margin-left:auto; margin-right:auto; }
+    .btn-close, .btn-clear { cursor: pointer; transition: all 0.3s; }
+    .btn-close { background:none; border:none; color:#2a56c6; font-weight:600; font-size:1rem; margin-bottom:15px; }
+    .btn-close:hover { color:#1a357f; }
+    .btn-clear {
+      display:block; margin:20px auto 0 auto;
+      background:#c43a3a; border:none; padding:10px 25px; border-radius:8px; color:white; font-weight:700;
+    }
+    .btn-clear:hover { background:#8b2828; }
+    @media(max-width:960px){
+      .card { width: 90vw; }
+      #searchInput { width: 90vw; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>DataHub ВУЗов Республики Казахстан</h1>
+    <input type="text" id="searchInput" placeholder="Поиск университета..." onkeyup="searchUniversity()"/>
+  </header>
+
+  <main>
+    <!-- Список университетов -->
+    <section id="universityList" class="card-container"></section>
+
+    <!-- Сравнение -->
+    <section id="compareSection" class="compare-section">
+      <h2>Сравнение университетов</h2>
+      <div style="display:flex; justify-content:center; gap:20px; flex-wrap:wrap;">
+        <div id="compareLeft" class="compare-card"></div>
+        <div id="compareRight" class="compare-card"></div>
+      </div>
+      <button onclick="clearComparison()" class="btn-clear">Очистить сравнение</button>
+    </section>
+
+    <!-- Детали -->
+    <section id="detailSection" class="detail-section">
+      <button onclick="closeDetails()" class="btn-close"> ← Назад к списку</button>
+      <div id="detailContent"></div>
+    </section>
+  </main>
+
+  <footer style="text-align:center; padding:20px 0; color:#555;">© 2025 Команда DataHub. Проект фестиваля информатики.</footer>
+
+  <script>
+    const universities = [
+      {id:1, name:"Казахский национальный университет им. аль-Фараби", city:"Алматы", type:"Государственный", lat:43.238949, lng:76.889709, mission:"Ведущий университет Казахстана. Подготовка специалистов и развитие науки.", programs:["Филология","Математика и информатика","Экономика","Юриспруденция","Физика"], admission:"ЕНТ 70+, документы онлайн до 1 августа", tour3D:"3D-тур на сайте", international:"Программы обмена с университетами Европы и Азии"},
+      {id:2, name:"Назарбаев Университет", city:"Астана", type:"Национальный", lat:51.147601, lng:71.426778, mission:"Современный университет, развитие инноваций и подготовка лидеров.", programs:["Информационные технологии","Биотехнологии","Экономика","Государственное управление","Международные отношения"], admission:"Подача онлайн, SAT/ACT, собеседование", tour3D:"3D-тур на сайте", international:"Партнерства с ведущими вузами США, Европы и Азии"},
+      {id:3, name:"Евразийский национальный университет им. Л.Н. Гумилёва", city:"Астана", type:"Государственный", lat:51.140000, lng:71.400000, mission:"Фокус на фундаментальных и прикладных науках, поддержка исследований.", programs:["Экология","История","Математика","Физическая культура","Медицина"], admission:"ЕНТ, бюджетные места", tour3D:"3D-тур в разработке", international:"Сотрудничество с университетами СНГ"},
+      {id:4, name:"Казахский национальный технический университет им. К.И.Сатпаева", city:"Алматы", type:"Государственный", lat:43.2220, lng:76.8512, mission:"Инженерные и технические программы.", programs:["Механика","Электроника","Информатика"], admission:"ЕНТ 65+, документы онлайн", tour3D:"На сайте", international:"Сотрудничество с зарубежными вузами"},
+      {id:5, name:"Казахский национальный медицинский университет им. С.Д. Асфендиярова", city:"Алматы", type:"Государственный", lat:43.2350, lng:76.9090, mission:"Медицинское образование и наука.", programs:["Лечебное дело","Стоматология","Фармация"], admission:"ЕНТ и собеседование", tour3D:"На сайте", international:"Обмен студентами с вузами СНГ"},
+      {id:6, name:"Казахский агротехнический университет им. С.Сейфуллина", city:"Алматы", type:"Государственный", lat:43.2380, lng:76.9360, mission:"Сельскохозяйственные и инженерные науки.", programs:["Агрономия","Ветеринария","Механизация сельского хозяйства"], admission:"ЕНТ и документы", tour3D:"На сайте", international:"Программы обмена в аграрных вузах"},
+      {id:7, name:"Казахский гуманитарно-юридический университет", city:"Алматы", type:"Государственный", lat:43.2500, lng:76.9000, mission:"Подготовка специалистов в сфере права и гуманитарных наук.", programs:["Юриспруденция","История","Филология"], admission:"ЕНТ 60+", tour3D:"На сайте", international:"Обмен студентами с вузами СНГ"},
+      {id:8, name:"Казахский университет экономики, финансов и международной торговли", city:"Алматы", type:"Государственный", lat:43.2400, lng:76.9100, mission:"Экономические и финансовые программы.", programs:["Экономика","Финансы","Менеджмент"], admission:"ЕНТ 65+", tour3D:"На сайте", international:"Сотрудничество с вузами Европы"},
+      {id:9, name:"Казахский национальный педагогический университет им. Абая", city:"Алматы", type:"Государственный", lat:43.2560, lng:76.9280, mission:"Подготовка педагогических кадров.", programs:["Педагогика","Филология","История"], admission:"ЕНТ 60+", tour3D:"На сайте", international:"Обмен студентами СНГ"},
+      {id:10, name:"Казахский экономический университет им. Т.Рыскулова", city:"Алматы", type:"Государственный", lat:43.2280, lng:76.8510, mission:"Экономические и управленческие программы.", programs:["Экономика","Менеджмент","Финансы"], admission:"ЕНТ и собеседование", tour3D:"На сайте", international:"Сотрудничество с вузами СНГ"},
+      {id:11, name:"Казахский национальный университет искусств", city:"Алматы", type:"Государственный", lat:43.2405, lng:76.8970, mission:"Художественное и музыкальное образование.", programs:["Музыка","Изобразительное искусство","Дизайн"], admission:"Вступительные экзамены", tour3D:"На сайте", international:"Программы обмена искусства"},
+      {id:12, name:"Казахский национальный университет транспорта и связи", city:"Алматы", type:"Государственный", lat:43.2430, lng:76.8890, mission:"Транспортные и логистические науки.", programs:["Транспорт","Логистика","Связь"], admission:"ЕНТ 65+", tour3D:"На сайте", international:"Сотрудничество с вузами Европы"},
+      {id:13, name:"Казахский национальный университет экономики и бизнеса", city:"Алматы", type:"Государственный", lat:43.2470, lng:76.8900, mission:"Экономика, бизнес и управление.", programs:["Менеджмент","Финансы","Маркетинг"], admission:"ЕНТ и документы", tour3D:"На сайте", international:"Сотрудничество с вузами Европы"},
+      {id:14, name:"Казахский национальный университет химии и биотехнологий", city:"Алматы", type:"Государственный", lat:43.2385, lng:76.8950, mission:"Химия и биотехнологии.", programs:["Химия","Биотехнология","Фармация"], admission:"ЕНТ и документы", tour3D:"На сайте", international:"Программы обмена науки"},
+      {id:15, name:"Казахский национальный университет физической культуры", city:"Алматы", type:"Государственный", lat:43.2420, lng:76.9000, mission:"Спорт и физическая культура.", programs:["Физическая культура","Тренерское дело","Реабилитация"], admission:"ЕНТ 55+", tour3D:"На сайте", international:"Обмен со спортивными вузами"},
+      {id:16, name:"Казахский национальный университет энергетики", city:"Астана", type:"Государственный", lat:51.1470, lng:71.4300, mission:"Энергетика и электротехника.", programs:["Энергетика","Электротехника","Инженерия"], admission:"ЕНТ 65+", tour3D:"На сайте", international:"Сотрудничество с вузами Европы"},
+      {id:17, name:"Казахский университет телекоммуникаций и информационных технологий", city:"Алматы", type:"Государственный", lat:43.2400, lng:76.8850, mission:"IT и телекоммуникации.", programs:["Информационные технологии","Телекоммуникации","Кибербезопасность"], admission:"ЕНТ 65+", tour3D:"На сайте", international:"Сотрудничество с IT-вузами Европы"},
+      {id:18, name:"Казахский национальный университет химии", city:"Алматы", type:"Государственный", lat:43.2370, lng:76.8870, mission:"Химия и аналитика.", programs:["Химия","Фармация","Аналитическая химия"], admission:"ЕНТ 60+", tour3D:"На сайте", international:"Обмен студентами химических вузов"},
+      {id:19, name:"Казахский университет культуры и искусств", city:"Алматы", type:"Государственный", lat:43.2390, lng:76.8960, mission:"Культура и искусство.", programs:["Культура","Музыка","Театр"], admission:"Вступительные экзамены", tour3D:"На сайте", international:"Программы обмена искусств"},
+      {id:20, name:"Казахский национальный университет информационных технологий", city:"Алматы", type:"Государственный", lat:43.2410, lng:76.8920, mission:"Компьютерные науки и IT.", programs:["Программирование","Сети","Кибербезопасность"], admission:"ЕНТ 65+", tour3D:"На сайте", international:"Сотрудничество с IT-вузами"},
+      {id:21, name:"Казахский университет экономики и права", city:"Алматы", type:"Государственный", lat:43.2425, lng:76.8940, mission:"Экономика и право.", programs:["Экономика","Юриспруденция","Финансы"], admission:"ЕНТ 60+", tour3D:"На сайте", international:"Обмен студентами"},
+      {id:22, name:"Казахский национальный университет социальных наук", city:"Алматы", type:"Государственный", lat:43.2435, lng:76.8900, mission:"Социальные науки и политика.", programs:["Политология","Социология","Психология"], admission:"ЕНТ 60+", tour3D:"На сайте", international:"Сотрудничество с вузами Европы"},
+      {id:23, name:"Казахский национальный университет транспорта", city:"Астана", type:"Государственный", lat:51.1450, lng:71.4280, mission:"Транспорт и логистика.", programs:["Транспорт","Логистика","Связь"], admission:"ЕНТ 65+", tour3D:"На сайте", international:"Программы обмена"},
+      {id:24, name:"Казахский университет международных отношений", city:"Астана", type:"Государственный", lat:51.1500, lng:71.4250, mission:"Международные отношения и дипломатия.", programs:["Международные отношения","Политология","Экономика"], admission:"ЕНТ 65+", tour3D:"На сайте", international:"Обмен студентами"},
+      {id:25, name:"Казахский университет новых технологий", city:"Алматы", type:"Государственный", lat:43.2440, lng:76.8900, mission:"Современные технологии и IT.", programs:["Информационные технологии","Робототехника","Искусственный интеллект"], admission:"ЕНТ 70+", tour3D:"На сайте", international:"Сотрудничество с IT-вузами"}
+    ];
+
+    let compareIds = [];
+
+    function loadUniversities(){
+      const container = document.getElementById("universityList");
+      container.innerHTML = "";
+      universities.forEach(u=>{
+        const card = document.createElement("div");
+        card.className="card";
+        card.innerHTML = `<h3>${u.name}</h3>
+          <p><b>Город:</b> ${u.city}</p>
+          <p><b>Тип:</b> ${u.type}</p>
+          <button class="btn-compare" onclick="showDetails(${u.id})">Подробнее</button>
+          <button class="btn-compare" onclick="toggleCompare(${u.id})">${compareIds.includes(u.id)?"Убрать из сравнения":"Добавить к сравнению"}</button>`;
+        container.appendChild(card);
+      });
+    }
+
+    function searchUniversity(){
+      const query = document.getElementById("searchInput").value.toLowerCase();
+      document.querySelectorAll(".card").forEach(card=>{
+        card.style.display = card.innerText.toLowerCase().includes(query) ? "flex" : "none";
+      });
+    }
+
+    function showDetails(id){
+      const uni = universities.find(u=>u.id===id); if(!uni) return;
+      document.getElementById("universityList").style.display="none";
+      document.getElementById("compareSection").style.display="none";
+      const detailSection = document.getElementById("detailSection"); detailSection.style.display="block";
+      document.getElementById("detailContent").innerHTML = `<h2>${uni.name}</h2>
+        <h3>1. В университете</h3><p>${uni.mission}</p>
+        <h3>2. Академические программы</h3><ul>${uni.programs.map(p=>`<li>${p}</li>`).join("")}</ul>
+        <h3>3. Приём и поступление</h3><p>${uni.admission}</p>
+        <h3>4. 3D-тур</h3><p>${uni.tour3D}</p>
+        <h3>5. Международное сотрудничество</h3><p>${uni.international}</p>`;
+    }
+
+    function closeDetails(){
+      document.getElementById("detailSection").style.display="none";
+      document.getElementById("universityList").style.display="flex";
+      if(compareIds.length>0) document.getElementById("compareSection").style.display="block";
+    }
+
+    function toggleCompare(id){
+      if(compareIds.includes(id)) compareIds = compareIds.filter(x=>x!==id);
+      else { if(compareIds.length>=2){alert("Можно сравнивать не более двух университетов."); return;} compareIds.push(id);}
+      updateCompareSection();
+      loadUniversities();
+    }
+
+    function updateCompareSection(){
+      const section=document.getElementById("compareSection");
+      const left=document.getElementById("compareLeft");
+      const right=document.getElementById("compareRight");
+      if(compareIds.length===0){section.style.display="none"; return;}
+      section.style.display="block";
+      const leftUni=universities.find(u=>u.id===compareIds[0]);
+      const rightUni=universities.find(u=>u.id===compareIds[1]);
+      left.innerHTML = leftUni? getCompareHTML(leftUni): "<p>Выберите университет</p>";
+      right.innerHTML = rightUni? getCompareHTML(rightUni): "<p>Выберите университет</p>";
+    }
+
+    function getCompareHTML(u){
+      return `<h3>${u.name}</h3>
+      <p><b>Город:</b> ${u.city}</p>
+      <p><b>Тип:</b> ${u.type}</p>
+      <h4>1. В университете</h4><p>${u.mission}</p>
+      <h4>2. Академические программы</h4><ul>${u.programs.map(p=>`<li>${p}</li>`).join("")}</ul>
+      <h4>3. Приём и поступление</h4><p>${u.admission}</p>
+      <h4>4. 3D-тур</h4><p>${u.tour3D}</p>
+      <h4>5. Международное сотрудничество</h4><p>${u.international}</p>`;
+    }
+
+    function clearComparison(){ compareIds=[]; updateCompareSection(); loadUniversities(); }
+
+    window.onload = function(){ loadUniversities(); };
+  </script>
+</body>
+</html>
